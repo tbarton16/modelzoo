@@ -40,6 +40,7 @@ def get_hashes(files, doc_queues, r):
             for item in pickle.load(fin):
                 key = f"{item['file_name']}@{item['doc_id']}"
                 minhash = LeanMinHash(item["hash"])
+                print(key, minhash.hashvalues)
                 for i, doc_queue in enumerate(doc_queues):
                     H = _H(minhash.hashvalues[i * r : (i + 1) * r])
                     doc_queue.put((key, H))

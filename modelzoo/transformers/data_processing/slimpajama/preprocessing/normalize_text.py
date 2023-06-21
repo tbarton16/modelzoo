@@ -90,29 +90,29 @@ def normalize_text(args):
     makedirs(args.target_dir, exist_ok=True)
     files = sorted(listdir(args.data_dir))
     files = list(filter(lambda file_: '.jsonl' in file_, files))
+    # recreate_dataset((files, args,1) )
+    # if args.idx != -1:
+    #     files = files[args.idx * 64 : (args.idx + 1) * 64]
 
-    if args.idx != -1:
-        files = files[args.idx * 64 : (args.idx + 1) * 64]
-
-    n_proc = cpu_count()
-    n_chunks = ceil(len(files) / n_proc)
-    remain = len(files) % n_proc
-    if n_chunks == 1 and remain:
-        n_proc = remain
-    print(f"resetting to {n_proc} for number of processes")
-    files = [files[i : i + n_chunks] for i in range(0, len(files), n_chunks)]
-
-    with Pool(processes=n_proc) as pool:
-        pbar = tqdm(
-            pool.imap(
-                recreate_dataset, zip(files, repeat(args), range(len(files)),),
-            ),
-            total=len(files),
-        )
-        for test in pbar:
-            pbar.update()
-            if test:
-                continue
+    # n_proc = cpu_count()
+    # n_chunks = ceil(len(files) / n_proc)
+    # remain = len(files) % n_proc
+    # if n_chunks == 1 and remain:
+    #     n_proc = remain
+    # print(f"resetting to {n_proc} for number of processes")
+    # files = [files[i : i + n_chunks] for i in range(0, len(files), n_chunks)]
+    
+    # with Pool(processes=n_proc) as pool:
+    #     pbar = tqdm(
+    #         pool.imap(
+    #             recreate_dataset, zip(files, repeat(args), range(len(files)),),
+    #         ),
+    #         total=len(files),
+    #     )
+    #     for test in pbar:
+    #         pbar.update()
+    #         if test:
+    #             continue
 
 
 if __name__ == "__main__":

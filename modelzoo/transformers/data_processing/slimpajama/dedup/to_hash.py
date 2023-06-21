@@ -65,7 +65,7 @@ def to_minhash(chunks):
         else:
             output_name = f"{dataset_name}/{file_name}"
 
-        m = MinHash(num_perm=128)
+        m = MinHash(num_perm=256)
         [m.update(x.encode('utf8')) for x in get_features(text, width)]
         buckets.append(
             {"file_name": output_name, "doc_id": doc_id, "hash": m,}
@@ -77,6 +77,7 @@ def output_results(output_dir, results, chunk_id, iter):
     with open(
         f"{output_dir}/minhash_nfc/{iter}-{chunk_id}.pickle", "wb"
     ) as fout:
+        print(results)
         pickle.dump(results, fout)
 
 
