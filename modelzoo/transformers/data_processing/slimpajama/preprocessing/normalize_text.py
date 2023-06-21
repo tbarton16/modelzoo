@@ -90,7 +90,7 @@ def normalize_text(args):
     makedirs(args.target_dir, exist_ok=True)
     files = sorted(listdir(args.data_dir))
     files = list(filter(lambda file_: '.jsonl' in file_, files))
-    # recreate_dataset((files, args,1) )
+    recreate_dataset((files, args,1) )
     # if args.idx != -1:
     #     files = files[args.idx * 64 : (args.idx + 1) * 64]
 

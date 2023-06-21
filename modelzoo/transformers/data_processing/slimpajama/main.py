@@ -6,7 +6,7 @@ sys.path.append("./preprocessing")
 from preprocessing import normalize_text, filter, shuffle_holdout, datasets
 from dedup import to_hash, dedup_train, generate_duplicate_pairs, generate_connected_components, generate_duplicates_dict
 from streaming.base.dataset import StreamingDataset
-
+from datasketch.lsh import _optimal_param
 # ds_names = ["arxiv", "stackexchange", "book", "wikipedia", "github", "c4", "common_crawl"]
 # cc_years = ["2019-30", "2020-05", "2021-04", "2022-05" "2023-06"]
 ds_names = ['arxiv3']
@@ -16,47 +16,55 @@ def main(input_dir):
     ds_dirs = ds_names.copy()
     
     red_pj_norm = os.path.join(input_dir, "RedPajama_norm")
-    for dataset in ds_dirs:
-        norm_args = argparse.Namespace()
-        norm_args.data_dir = os.path.join(input_dir, dataset)
-        norm_args.target_dir = os.path.join(red_pj_norm, dataset)
-        norm_args.zst = "common_crawl" in dataset
-        norm_args.idx = -1
-        normalize_text.normalize_text(norm_args)
+    # for dataset in ds_dirs:
+    #     norm_args = argparse.Namespace()
+    #     norm_args.data_dir = os.path.join(input_dir, dataset)
+    #     norm_args.target_dir = os.path.join(red_pj_norm, dataset)
+    #     print("norm dir ", norm_args.target_dir)
+    #     norm_args.zst = "common_crawl" in dataset
+    #     norm_args.idx = -1
+    #     normalize_text.normalize_text(norm_args)
     print("norm done")
     # filter docs
-    short_docs = os.path.join(red_pj_norm, "red_pj_filter.pickle")
-    filter_args = argparse.Namespace()
-    filter_args.input_dir = red_pj_norm
-    filter_args.output_file = short_docs
-    filter_args.n_docs = 100 #TODO: update
-    filter_args.dataset_name = "all"
-    filter_args.threshold = 200
-    filter.filter_dataset(filter_args)
-    print("filter done")
+    # short_docs = os.path.join(red_pj_norm, "red_pj_filter.pickle")
+    # filter_args = argparse.Namespace()
+    # filter_args.input_dir = red_pj_norm
+    # filter_args.output_file = short_docs
+    # filter_args.n_docs = 100 #TODO: update
+    # filter_args.dataset_name = "all"
+    # filter_args.threshold = 200
+    # filter.filter_dataset(filter_args)
+    # print("filter done")
     # generate minhash
-    for dataset in ds_dirs:
-        hash_args = argparse.Namespace()
-        hash_args.dataset_name = "common_crawl" if "common_crawl" in dataset else dataset
-        hash_args.input_dir = os.path.join(red_pj_norm, dataset)
-        hash_args.output_dir = os.path.join(red_pj_norm, dataset)
-        hash_args.n_docs = 200 #TODO: update
-        hash_args.iter = 0
-        hash_args.index_start = 0
-        hash_args.index_end = None
-        hash_args.w = 13
-        hash_args.k = 10000
-        to_hash.generate_hashes(hash_args)
-
+    # for dataset in ds_dirs:
+    #     hash_args = argparse.Namespace()
+    #     hash_args.dataset_name = "common_crawl" if "common_crawl" in dataset else dataset
+    #     hash_args.input_dir = os.path.join(red_pj_norm, dataset)
+    #     hash_args.output_dir = os.path.join(red_pj_norm, dataset)
+    #     print("hash dir ", hash_args.output_dir)
+    #     hash_args.n_docs = 200 #TODO: update
+    #     hash_args.iter = 0
+    #     hash_args.index_start = 0
+    #     hash_args.index_end = None
+    #     hash_args.w = 13
+    #     hash_args.k = 10000
+    #     to_hash.generate_hashes(hash_args)
+    print("hash done")
     # generate duplicates
+    b, r = _optimal_param(.9, 128, .5, .5)
     dup_dir = os.path.join(red_pj_norm, "dup")
     os.makedirs(dup_dir, exist_ok=True)
     dup_pairs_args = argparse.Namespace()
     dup_pairs_args.input_dir = red_pj_norm
     dup_pairs_args.out_file = os.path.join(dup_dir, "duplicate_pairs.txt")
-    dup_pairs_args.range = 450
-    dup_pairs_args.bands = 20
-    dup_pairs_args.processes = 45
+    dup_pairs_args.range = r
+    dup_pairs_args.bands = b
+    print(r,b)
+    dup_pairs_args.processes = 64 - b
+
+    #dup_pairs_args.range = 13
+    #dup_pairs_args.bands = 9
+    #dup_pairs_args.processes = 45
     generate_duplicate_pairs.generate_pairs(dup_pairs_args)
 
     dup_connected_args = argparse.Namespace()

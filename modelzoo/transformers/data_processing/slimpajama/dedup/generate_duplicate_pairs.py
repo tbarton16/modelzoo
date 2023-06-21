@@ -24,6 +24,7 @@ def split_files(input_dir, n_proc):
         "github",
         "c4",
         "common_crawl",
+        "arxiv3",
     ]:
         if dataset == "common_crawl":
             files.extend(glob(f"{input_dir}/{dataset}/*/minhash_nfc/*"))
@@ -40,7 +41,6 @@ def get_hashes(files, doc_queues, r):
             for item in pickle.load(fin):
                 key = f"{item['file_name']}@{item['doc_id']}"
                 minhash = LeanMinHash(item["hash"])
-                print(key, minhash.hashvalues)
                 for i, doc_queue in enumerate(doc_queues):
                     H = _H(minhash.hashvalues[i * r : (i + 1) * r])
                     doc_queue.put((key, H))
@@ -77,7 +77,7 @@ def generate_pairs(args):
     # size of the queue was tuned for optimal perf and memory constraints.
     doc_queues = [Queue(1000000) for _ in range(args.bands)]
     files = split_files(args.input_dir, args.processes)
-
+    print(args.input_dir)
     processes = []
     for process_id in range(args.processes):
         p = Process(
