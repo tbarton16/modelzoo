@@ -5,7 +5,7 @@ import time
 from collections import defaultdict
 from glob import glob
 from multiprocessing import Process, Queue
-
+from typing import List
 from datasketch.lean_minhash import LeanMinHash
 from more_itertools import divide
 
@@ -14,18 +14,9 @@ def _H(hs):
     return bytes(hs.byteswap().data)
 
 
-def split_files(input_dir, n_proc):
+def split_files(input_dir, n_proc, datasets):
     files = []
-    for dataset in [
-        "arxiv",
-        "stackexchange",
-        "book",
-        "wikipedia",
-        "github",
-        "c4",
-        "common_crawl",
-        "arxiv3",
-    ]:
+    for dataset in datasets:
         if dataset == "common_crawl":
             files.extend(glob(f"{input_dir}/{dataset}/*/minhash_nfc/*"))
         else:
@@ -76,7 +67,7 @@ def lsh(out_file, doc_queue, idx):
 def generate_pairs(args):
     # size of the queue was tuned for optimal perf and memory constraints.
     doc_queues = [Queue(1000000) for _ in range(args.bands)]
-    files = split_files(args.input_dir, args.processes)
+    files = split_files(args.input_dir, args.processes, args.datasets)
     print(args.input_dir)
     processes = []
     for process_id in range(args.processes):
@@ -111,6 +102,9 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--processes", type=int,
+    )
+    parser.add_argument(
+        "--datasets", type=List,
     )
     args = parser.parse_args()
 
