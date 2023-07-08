@@ -94,20 +94,22 @@ def generate_hashes(args):
     results = []
     chunk_id = 0
     gc.collect()
-    with Pool(processes=cpu_count()) as pool:
+    print(cpu_count())
+    cpucount = int(cpu_count() - 12)
+    with Pool(processes=cpucount) as pool:
         for i, chunks in enumerate(
             tqdm(
-                pool.imap(
+                pool.imap_unordered(
                     to_minhash,
                     zip(
-                        chunked(documents, args.n_docs // cpu_count()),
+                        chunked(documents, args.n_docs // cpucount),
                         repeat(args.output_dir),
                         repeat(args.w),
                         repeat(args.dataset_name),
-                        repeat(args.n_docs // cpu_count()),
+                        repeat(args.n_docs // cpucount),
                     ),
                 ),
-                total=cpu_count(),
+                total=cpucount,
             )
         ):
 

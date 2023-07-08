@@ -10,12 +10,12 @@ def utf8len(s):
     return len(s.encode('utf-8'))
 
 
-def cycle_documents(dataset, process_id, n_process, dup_sh, short_sh):
+def cycle_documents(dataset, process_id, n_process, dup_sh):
     while True:
         # https://github.com/EleutherAI/the-pile/blob/df97f8651ae3da658b19659b3ceaa6a34b0fc014/the_pile/utils.py#L104
         yield from filter(
             lambda x: x,
-            dataset.documents(process_id, n_process, dup_sh, short_sh),
+            dataset.documents(process_id, n_process, dup_sh),
         )
 
 

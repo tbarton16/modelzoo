@@ -1,7 +1,6 @@
 import argparse
 import gc
 import os
-# 2 pass shuffling algorithm: https://blog.janestreet.com/how-to-shuffle-a-big-dataset/
 import queue
 import random
 import sys
@@ -10,12 +9,11 @@ from multiprocessing import Process, Queue
 
 from more_itertools import chunked
 from tqdm import tqdm
-
-sys.path.append(os.path.join(os.path.dirname(__file__), "../utils"))
-sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
-from datasets import RedPajamaReplication, redpj_datasets
+ROOT = os.path.expanduser('~')
+sys.path.append(f"{ROOT}/modelzoo/modelzoo/transformers")
+import data_processing.slimpajama.preprocessing.datasets as datasets
 from lm_dataformat import lm_dataformat as lmd
-from utils import rm_if_exists, write_lmd_dataset
+import data_processing.slimpajama.utils.utils as utils
 
 
 def write_docs(q, ar, archive_name):
@@ -42,7 +40,7 @@ def pass_1_shuffle(
     redpajama_dataset, output_dir_path="./", archive_name="redpajama"
 ):
     # We create piles of the dataset and store them as lmd;
-    rm_if_exists(output_dir_path)
+    utils.rm_if_exists(output_dir_path)
     os.mkdir(output_dir_path)
     total_bytes = redpajama_dataset.size()
 
@@ -124,9 +122,9 @@ def pass_2_shuffle_holdout(
         holdout_output_chunk = f"{output_holdout_dir_path}/chunk{chunk_id}"
         os.makedirs(output_dir_path, exist_ok=True)
         os.makedirs(output_holdout_dir_path, exist_ok=True)
-        rm_if_exists(train_output_chunk)
+        utils.rm_if_exists(train_output_chunk)
         os.mkdir(train_output_chunk)
-        rm_if_exists(holdout_output_chunk)
+        utils.rm_if_exists(holdout_output_chunk)
         os.mkdir(holdout_output_chunk)
 
         for j in range(n):
@@ -141,24 +139,24 @@ def pass_2_shuffle_holdout(
                 output_holdout_file_name, "wb"
             ) as holdout_fout:
                 # train output set
-                write_lmd_dataset(fout, lines, buckets_train[j])
+                utils.write_lmd_dataset(fout, lines, buckets_train[j])
 
                 # holdout output set
-                write_lmd_dataset(holdout_fout, lines, buckets_holdout[j])
+                utils.write_lmd_dataset(holdout_fout, lines, buckets_holdout[j])
 
         for j in range(n, len(buckets_train)):
             output_file_name = (
                 f"{train_output_chunk}/example_train_{j}.jsonl.zst"
             )
             with open(output_file_name, "wb") as fout:
-                write_lmd_dataset(fout, lines, buckets_train[j])
+                utils.write_lmd_dataset(fout, lines, buckets_train[j])
 
         for j in range(n, len(buckets_holdout)):
             output_holdout_file_name = (
                 f"{holdout_output_chunk}/example_holdout_{j}.jsonl.zst"
             )
             with open(output_holdout_file_name, "wb") as holdout_fout:
-                write_lmd_dataset(holdout_fout, lines, buckets_holdout[j])
+                utils.write_lmd_dataset(holdout_fout, lines, buckets_holdout[j])
 
         del lines
         gc.collect()
@@ -189,8 +187,8 @@ if __name__ == "__main__":
         if inputdir[-1] != '/':
             inputdir += '/'
         pass_1_shuffle(
-            RedPajamaReplication(
-                redpj_datasets(inputdir), args.duplicates, args.short_docs
+            datasets.RedPajamaReplication(
+                datasets.redpj_datasets(inputdir), args.duplicates, args.short_docs
             ),
             output_dir_path=args.out_dir,
         )

@@ -11,7 +11,9 @@ from tqdm import tqdm
 sys.path.append(os.path.join(os.path.dirname(__file__), "../utils"))
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 from lm_dataformat.lm_dataformat import Reader
-from utils import cycle_documents, utf8len
+ROOT = os.path.expanduser('~')
+sys.path.append(f"{ROOT}/modelzoo/modelzoo/transformers")
+import data_processing.slimpajama.utils.utils as utils
 
 
 class Dataset(abc.ABC):
@@ -24,7 +26,7 @@ class Dataset(abc.ABC):
     def name(self):
         """ Human-readable name of tfhe dataset """
 
-    def documents(self, process_id, n_process, dup_sh, short_sh):
+    def documents(self, process_id, n_process, dup_sh):
         """ A generator producing all documents in the dataset. """
         filtered = 0
         total_count = 0
@@ -34,10 +36,10 @@ class Dataset(abc.ABC):
             reader = Reader(file_path)
             file_name = file_path.replace(self.stem_dir_path(), "")
             duplicates_set = dup_sh.get(file_name, set())
-            short_set = short_sh.get(file_name, set())
+            
             for doc_id, doc in enumerate(reader._stream_data(jsonl_key="text")):
                 if doc_id % n_process == process_id:
-                    if doc_id not in short_set and doc_id not in duplicates_set:
+                    if doc_id not in duplicates_set:
                         total_count += 1
                         yield {"doc": doc, "meta": {}}
                     else:
@@ -51,7 +53,7 @@ class Dataset(abc.ABC):
         """ Return an estimate of the dataset size. Implementations may use a faster, less accurate estimate. """
         size = sum(
             map(
-                lambda x: utf8len(x["doc"]),
+                lambda x: utils.utf8len(x["doc"]),
                 tqdm(self.documents(), total=self.num_docs()),
             )
         )
@@ -300,10 +302,10 @@ class RedPajamaStackExchangeDataset(Dataset):
 
 
 class RedPajamaReplication(Dataset):
-    def __init__(self, datasets, duplicates, short_docs):
+    def __init__(self, datasets, duplicates):
         self.datasets = datasets
         self.duplicates = duplicates
-        self.short_docs = short_docs
+        #self.short_docs = short_docs
         self.rnd_docs = random.Random(42)
         self.rnd_queues = random.Random(420)
 
@@ -321,17 +323,18 @@ class RedPajamaReplication(Dataset):
         )
 
     def sample_documents(
-        self, weights, k, queues, process_id, n_process, dup_sh, short_sh
+        self, weights, k, queues, process_id, n_process, dup_sh
     ):
         # each process is going to sample documents with batch size k
         # sampling is happening globally across all available documents;
         datasets = []
+
         for dataset, _ in self.datasets:
             datasets.append(
                 (
                     dataset.name(),
-                    cycle_documents(
-                        dataset, process_id, n_process, dup_sh, short_sh
+                    utils.cycle_documents(
+                        dataset, process_id, n_process, dup_sh
                     ),
                 )
             )
@@ -362,12 +365,12 @@ class RedPajamaReplication(Dataset):
         with open(self.duplicates, "rb") as fin:
             dup = pickle.load(fin)
 
-        with open(self.short_docs, "rb") as fin:
-            short = pickle.load(fin)
+        # with open(self.short_docs, "rb") as fin:
+        #     short = pickle.load(fin)
 
         manager = Manager()
         dup_sh = manager.dict(dup)
-        short_sh = manager.dict(short)
+        #short_sh = manager.dict(short)
         # create processes here to speed up read and write in shuffle_holdout.py
         # queues are given by shuffle_holdout to populate with documents
         n_process = 2 * len(queues)
@@ -382,8 +385,7 @@ class RedPajamaReplication(Dataset):
                     queues,
                     process_id,
                     n_process,
-                    dup_sh,
-                    short_sh,
+                    dup_sh
                 ),
             )
             procs.append(p)
